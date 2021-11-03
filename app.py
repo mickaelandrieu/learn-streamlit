@@ -10,6 +10,13 @@ def load_data():
     return pd.read_csv('Data/super_store.csv', parse_dates=['Order Date', 'Ship Date'])
 
 super_store = load_data()
+super_store.rename(
+    columns={
+        'Order Date': 'order_date',
+        'Ship Date': 'ship_date'
+    },
+    inplace = True
+)
 
 # Titre du Dashboard
 st.title('Votre premier dashboard avec Plotly et Streamlit')
@@ -23,14 +30,48 @@ with st.expander('Cliquez pour ouvrir les paramètres de recherche'):
              Choisissez ci-dessous les paramètres adaptés pour
              filtrer les données représentées sous forme de graphiques:
     """)
-    dates = super_store['Order Date']
-    start_date, end_date = dates.min().to_pydatetime(), dates.max().to_pydatetime()
+
+    dates = super_store['order_date']
+    categories = super_store['Category'].unique()
+    segments = super_store['Segment'].unique()
+    regions = super_store['Region'].unique()
+
     date_range = st.slider('Sélectionnez l\'intervalle de temps considéré :',
         min_value=dates.min(),
-        value=(start_date, end_date),
+        value=(dates.min().to_pydatetime(), dates.max().to_pydatetime()),
         max_value=dates.max(),
         format='DD/MM/YY'
     )
+    start_date, end_date = date_range
+
+    selected_categories = st.multiselect(
+        label = 'Sélectionnez les catégories de produit :',
+        options = categories,
+        default = categories
+    )
+
+    selected_segments = st.multiselect(
+        label = 'Sélectionnez les types de clientèle :',
+        options = segments,
+        default = segments
+    )
+
+    selected_regions = st.multiselect(
+        label = 'Sélectionnez les régions :',
+        options = regions,
+        default = regions
+    )
+
+    super_store = super_store.query('order_date >= @start_date \
+        and order_date <= @end_date \
+        and Category in @selected_categories \
+        and Segment in @selected_segments \
+        and Region in @selected_regions \
+    ')
+
+    if super_store.empty:
+        st.error('Pas de données pour cette sélection : choisissez d\'autres paramètres.')
+        st.stop()
 
 with left_block:
     st.subheader('Quantité de produits vendus')
